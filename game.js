@@ -3,7 +3,7 @@
    NOVA — Les Collines de Valenciennes
    Mini-platformer en un niveau. Canvas + Web Audio, zéro dépendance.
    DA : automne pastel. Héroïne : Nova, teckel nain noir et feu à poils
-   longs, qui ramasse des baballes orange. Ennemis : "Grolls" violets.
+   longs, qui ramasse des baballes orange. Ennemis : matous gris rayés.
    Jouable au clavier et en tactile (boutons virtuels sur mobile).
    ===================================================================== */
 
@@ -76,7 +76,7 @@ const COIN_T = [
 --------------------------------------------------------------------- */
 const PAL = {
   n: '#23202b', e: '#3a3543', t: '#c8702a',
-  W: '#ffffff', B: '#2a2030', g: '#9b78d1', m: '#5b3a8e',
+  W: '#ffffff', B: '#2a2030', c: '#9aa3b8', s: '#5f6680',
 };
 function makeSprite(rows, scale = 2) {
   const c = document.createElement('canvas');
@@ -111,42 +111,48 @@ const S = {
   novaIdle: makeSprite([...NOVA_BODY, '...tt......tt...', '...tt......tt...', '................']),
   novaRun:  makeSprite([...NOVA_BODY, '..tt........tt..', '.tt..........tt.', '................']),
   novaJump: makeSprite([...NOVA_BODY, '...tt.....tt....', '................', '................']),
-  grollA: makeSprite([
-    '................', '................', '................', '................', '................',
-    '....mm....mm....',
-    '...gggggggggg...',
-    '..gggggggggggg..',
-    '.gggggggggggggg.',
-    '.ggWBggggggWBgg.',
-    '.gggggggggggggg.',
-    '.ggggmmmmmmgggg.',
-    '.gggggggggggggg.',
-    '..gggggggggggg..',
-    '.mm.mm....mm.mm.',
+  /* Matou de profil, tourné vers la gauche : tête à gauche, rayures
+     sombres sur le dos, queue dressée à droite. */
+  catA: makeSprite([
+    '................', '................', '................',
+    '..c...c.........',
+    '..cc.cc.........',
+    '.ccccccc........',
+    '.cWBcccc........',
+    '.cccccc......cc.',
+    '.Wccccc......cc.',
+    '..ccccccccccccc.',
+    '..ccsccsccscc...',
+    '..cWWccccccccc..',
+    '..cccccccccccc..',
+    '..cc..cc..cc....',
+    '..ss..ss..ss....',
     '................',
   ]),
-  grollB: makeSprite([
-    '................', '................', '................', '................', '................',
-    '....mm....mm....',
-    '...gggggggggg...',
-    '..gggggggggggg..',
-    '.gggggggggggggg.',
-    '.ggWBggggggWBgg.',
-    '.gggggggggggggg.',
-    '.ggggmmmmmmgggg.',
-    '.gggggggggggggg.',
-    '..gggggggggggg..',
-    '..mm.mm..mm.mm..',
+  catB: makeSprite([
+    '................', '................', '................',
+    '..c...c.........',
+    '..cc.cc.........',
+    '.ccccccc........',
+    '.cWBcccc........',
+    '.cccccc.....cc..',
+    '.Wccccc......cc.',
+    '..ccccccccccccc.',
+    '..ccsccsccscc...',
+    '..cWWccccccccc..',
+    '..cccccccccccc..',
+    '...cc..cc..cc...',
+    '...ss..ss..ss...',
     '................',
   ]),
-  grollSquash: makeSprite([
+  catSquash: makeSprite([
     '................', '................', '................', '................', '................',
     '................', '................', '................', '................', '................',
     '................', '................',
-    '..gggggggggggg..',
-    '.gggggggggggggg.',
-    '.gWBggggggggWBg.',
-    '.mmmmmmmmmmmmmm.',
+    '..cccccccccccc..',
+    '.cWBcccccccccc..',
+    '.ssssssssssssss.',
+    '................',
   ]),
 };
 
@@ -258,11 +264,16 @@ function squeak(delay = 0) {
 function whine(f0, f1, dur, delay = 0) {
   tone({ f0, f1, dur, type: 'sine', vol: 0.13, delay });
 }
+function meow(delay = 0) {
+  // miaou indigné du matou écrasé : montée puis chute nasillarde
+  tone({ f0: 520, f1: 800, dur: 0.12, type: 'sawtooth', vol: 0.09, delay });
+  tone({ f0: 800, f1: 320, dur: 0.2, type: 'sawtooth', vol: 0.09, delay: delay + 0.12 });
+}
 const SFX = {
   jump()  { bark(1); },                                               // wouf !
   land()  { noise({ dur: 0.07, vol: 0.12, f: 400 }); },               // pattes au sol
   coin()  { squeak(); },                                              // baballe qui couine
-  stomp() { noise({ dur: 0.12, vol: 0.18, f: 600 }); tone({ f0: 110, f1: 65, dur: 0.22, type: 'sawtooth', vol: 0.16 }); }, // grognement + plouf
+  stomp() { noise({ dur: 0.1, vol: 0.14, f: 500 }); meow(); },        // plouf + miaou indigné
   brick() { noise({ dur: 0.2, vol: 0.22, f: 900 }); tone({ f0: 180, f1: 60, dur: 0.12, type: 'square', vol: 0.08 }); },
   bump()  { tone({ f0: 120, f1: 80, dur: 0.08, type: 'square', vol: 0.15 }); },
   hurt()  { whine(1150, 480, 0.18); whine(950, 380, 0.24, 0.2); },    // kaï kaï !
@@ -511,7 +522,7 @@ function collidePlayerEnemies() {
       score += 200;
       SFX.stomp();
       player.vy = (keys.Space || keys.ArrowUp || keys.KeyW) ? -11.5 : -8.5;
-      dust(en.x + en.w / 2, en.y + 6, '#9b78d1');
+      dust(en.x + en.w / 2, en.y + 6, '#9aa3b8');
     } else {
       die(false);
       return;
@@ -694,7 +705,7 @@ function drawWorld() {
 
   // ennemis
   for (const en of enemies) {
-    const spr = en.dead ? S.grollSquash : (Math.floor(en.t / 12) % 2 ? S.grollA : S.grollB);
+    const spr = en.dead ? S.catSquash : (Math.floor(en.t / 12) % 2 ? S.catA : S.catB);
     const dx = Math.round(en.x + en.w / 2), dyE = Math.round(en.y + en.h - 30);
     ctx.save();
     ctx.translate(dx, dyE + 16);
@@ -773,10 +784,10 @@ function render() {
     titleTxt('NOVA', cx, cy - 110, 64, '#f08020');
     titleTxt('Le chien des Collines de Valenciennes', cx, cy - 60, 24, '#ffe9c9');
     ctx.drawImage(S.novaIdle, cx - 130, cy - 20, 96, 96);
-    ctx.drawImage(S.grollA, cx + 40, cy + 12, 72, 72);
+    ctx.drawImage(S.catA, cx + 40, cy + 12, 72, 72);
     if (IS_TOUCH) txt('◀ ▶ bouger    B courir    A sauter', cx, cy + 116, 19, '#ffffff', 'center');
     else txt('← → bouger    MAJ courir    ESPACE sauter', cx, cy + 116, 19, '#ffffff', 'center');
-    txt('Saute sur les Grolls, attrape les baballes orange, file au drapeau !', cx, cy + 146, 16, '#cfd6df', 'center');
+    txt('Saute sur les matous, attrape les baballes orange, file au drapeau !', cx, cy + 146, 16, '#cfd6df', 'center');
     if (Math.floor(gFrame / 30) % 2) txt(IS_TOUCH ? '— Touche l\'écran pour jouer —' : '— Appuie sur une touche —', cx, cy + 190, 20, '#ffd23e', 'center');
   } else if (state === 'pause') {
     overlayBox(0.45);
