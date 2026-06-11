@@ -3,63 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>NOVA 64 — Les Collines en 3D</title>
+<title>NOVA SUNSHINE — La Baie des Baballes</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #16121f; font-family: Consolas, "Courier New", monospace; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0a2a40; font-family: Consolas, "Courier New", monospace; }
   #game { position: fixed; inset: 0; }
-  #game canvas { width: 100% !important; height: 100% !important; image-rendering: pixelated; }
+  #game canvas { width: 100% !important; height: 100% !important; image-rendering: auto; }
 
   #hud {
     position: fixed; top: 0; left: 0; right: 0; z-index: 5; pointer-events: none;
     display: flex; gap: 20px; align-items: center; padding: 10px 16px;
     color: #fff; font-weight: bold; font-size: 17px;
-    text-shadow: 2px 2px 0 rgba(20, 10, 5, .6);
-    background: linear-gradient(rgba(20, 16, 40, .7), rgba(20, 16, 40, 0));
+    text-shadow: 2px 2px 0 rgba(10, 30, 50, .6);
+    background: linear-gradient(rgba(10, 40, 70, .55), rgba(10, 40, 70, 0));
   }
-  #hud .ball { color: #f08020; }
-  #hud .score { color: #ffd23e; }
+  #hud .ball { color: #ff8c28; }
+  #hud .score { color: #ffe34a; }
   #superwrap { display: none; align-items: center; gap: 6px; }
-  #superbar { width: 120px; height: 8px; background: rgba(60, 50, 88, .8); border-radius: 4px; overflow: hidden; }
-  #superfill { height: 100%; width: 100%; background: #ffd23e; }
-  #superwrap span { color: #ffd23e; font-size: 12px; }
+  #superbar { width: 120px; height: 8px; background: rgba(20, 60, 90, .8); border-radius: 4px; overflow: hidden; }
+  #superfill { height: 100%; width: 100%; background: #ffe34a; }
+  #superwrap span { color: #ffe34a; font-size: 12px; }
 
   .overlay {
     position: fixed; inset: 0; z-index: 10; cursor: pointer; user-select: none;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(15, 12, 30, .55); color: #fff; text-align: center; padding: 0 16px;
+    background: rgba(8, 30, 50, .5); color: #fff; text-align: center; padding: 0 16px;
   }
-  .overlay h1 { font-size: min(15vw, 76px); color: #f08020; margin: 0 0 4px; text-shadow: 5px 5px 0 rgba(40, 20, 10, .8); }
-  .overlay h2 { font-size: min(4.5vw, 22px); color: #ffe9c9; margin: 0 0 22px; font-weight: normal; }
-  .overlay p { margin: 6px 0; color: #cfd6df; font-size: min(3.8vw, 16px); }
-  .overlay .go { color: #ffd23e; font-size: min(5vw, 20px); margin-top: 26px; animation: blink 1s steps(1) infinite; }
+  .overlay h1 { font-size: min(13vw, 70px); color: #ffe34a; margin: 0 0 4px; text-shadow: 5px 5px 0 rgba(10, 60, 90, .8); }
+  .overlay h2 { font-size: min(4.5vw, 22px); color: #d8f4ff; margin: 0 0 22px; font-weight: normal; }
+  .overlay p { margin: 6px 0; color: #cfeaf8; font-size: min(3.8vw, 16px); }
+  .overlay .go { color: #ffe34a; font-size: min(5vw, 20px); margin-top: 26px; animation: blink 1s steps(1) infinite; }
   .overlay .big { font-size: min(6vw, 26px); color: #fff; }
   @keyframes blink { 50% { opacity: 0; } }
   [hidden] { display: none !important; }
 
-  /* ---- contrôles tactiles ---- */
-  #joyzone {
-    position: fixed; left: 0; bottom: 0; width: 45vw; height: 55vh; z-index: 8;
-    touch-action: none;
-  }
+  #joyzone { position: fixed; left: 0; bottom: 0; width: 45vw; height: 55vh; z-index: 8; touch-action: none; }
   #joybase {
     position: absolute; width: 96px; height: 96px; border-radius: 50%;
-    border: 2px solid rgba(255, 233, 201, .5); background: rgba(60, 50, 88, .45);
+    border: 2px solid rgba(216, 244, 255, .55); background: rgba(20, 70, 110, .45);
     transform: translate(-50%, -50%); display: none;
   }
   #joyknob {
     position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; border-radius: 50%;
-    background: rgba(240, 128, 32, .8); transform: translate(-50%, -50%);
+    background: rgba(255, 140, 40, .85); transform: translate(-50%, -50%);
   }
   #touch button {
     position: fixed; z-index: 8; bottom: 5vh;
     width: 17vmin; height: 17vmin; min-width: 56px; min-height: 56px;
-    border-radius: 50%; border: 2px solid rgba(255, 233, 201, .5);
-    background: rgba(60, 50, 88, .55); color: #ffe9c9;
+    border-radius: 50%; border: 2px solid rgba(216, 244, 255, .55);
+    background: rgba(20, 70, 110, .55); color: #d8f4ff;
     font-family: inherit; font-size: 6vmin; font-weight: bold;
     touch-action: none; user-select: none; -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
-  #touch button:active { background: rgba(240, 128, 32, .65); }
+  #touch button:active { background: rgba(255, 140, 40, .65); }
   #btnA { right: 4vw; }
   #btnB { right: calc(4vw + 19vmin); }
 </style>
@@ -81,14 +77,14 @@
   </div>
 
   <div id="ovTitle" class="overlay">
-    <h1>NOVA 64</h1>
-    <h2>Les Collines de Valenciennes — en 3D</h2>
-    <p id="ctrlsDesk">ZQSD / flèches bouger · MAJ courir · ESPACE sauter</p>
+    <h1>NOVA SUNSHINE</h1>
+    <h2>La Baie des Baballes — ère GameCube</h2>
+    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · Q/E caméra · MAJ marcher</p>
     <p id="ctrlsTouch" hidden>Joystick à gauche · B courir · A sauter</p>
-    <p>Ramasse les baballes, écrase les matous,</p>
+    <p>Nage dans la baie, cours sur le ponton, ramasse les baballes,</p>
     <p>trouve la SUPER BABALLE et plante le drapeau au sommet !</p>
     <p class="go">— Clique ou touche pour jouer —</p>
-    <p><a href="../" style="color:#8d86a8">← NOVA 2D</a> · <a href="../gc/" style="color:#ffd23e">NOVA SUNSHINE (GameCube) →</a></p>
+    <p><a href="../64/" style="color:#9ec8dd">← NOVA 64</a> · <a href="../" style="color:#9ec8dd">NOVA 2D</a></p>
   </div>
 
   <div id="ovWin" class="overlay" hidden>
@@ -98,7 +94,7 @@
   </div>
 
   <div id="ovOver" class="overlay" hidden>
-    <h1 style="font-size:min(10vw,54px);color:#d8434e">GAME OVER</h1>
+    <h1 style="font-size:min(10vw,54px);color:#ff5a5a">GAME OVER</h1>
     <p class="big" id="overStats"></p>
     <p class="go">— Clique pour réessayer —</p>
   </div>
@@ -106,6 +102,6 @@
   <script type="importmap">
     { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
   </script>
-  <script type="module" src="nova64.js"></script>
+  <script type="module" src="novagc.js"></script>
 </body>
 </html>
