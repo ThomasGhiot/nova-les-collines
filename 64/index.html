@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>NOVA 64 — Les Collines en 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #16121f; font-family: Consolas, "Courier New", monospace; }
+  #game { position: fixed; inset: 0; }
+  #game canvas { width: 100% !important; height: 100% !important; image-rendering: pixelated; }
+
+  #hud {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 5; pointer-events: none;
+    display: flex; gap: 20px; align-items: center; padding: 10px 16px;
+    color: #fff; font-weight: bold; font-size: 17px;
+    text-shadow: 2px 2px 0 rgba(20, 10, 5, .6);
+    background: linear-gradient(rgba(20, 16, 40, .7), rgba(20, 16, 40, 0));
+  }
+  #hud .ball { color: #f08020; }
+  #hud .score { color: #ffd23e; }
+  #superwrap { display: none; align-items: center; gap: 6px; }
+  #superbar { width: 120px; height: 8px; background: rgba(60, 50, 88, .8); border-radius: 4px; overflow: hidden; }
+  #superfill { height: 100%; width: 100%; background: #ffd23e; }
+  #superwrap span { color: #ffd23e; font-size: 12px; }
+
+  .overlay {
+    position: fixed; inset: 0; z-index: 10; cursor: pointer; user-select: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(15, 12, 30, .55); color: #fff; text-align: center; padding: 0 16px;
+  }
+  .overlay h1 { font-size: min(15vw, 76px); color: #f08020; margin: 0 0 4px; text-shadow: 5px 5px 0 rgba(40, 20, 10, .8); }
+  .overlay h2 { font-size: min(4.5vw, 22px); color: #ffe9c9; margin: 0 0 22px; font-weight: normal; }
+  .overlay p { margin: 6px 0; color: #cfd6df; font-size: min(3.8vw, 16px); }
+  .overlay .go { color: #ffd23e; font-size: min(5vw, 20px); margin-top: 26px; animation: blink 1s steps(1) infinite; }
+  .overlay .big { font-size: min(6vw, 26px); color: #fff; }
+  @keyframes blink { 50% { opacity: 0; } }
+  [hidden] { display: none !important; }
+
+  /* ---- contrôles tactiles ---- */
+  #joyzone {
+    position: fixed; left: 0; bottom: 0; width: 45vw; height: 55vh; z-index: 8;
+    touch-action: none;
+  }
+  #joybase {
+    position: absolute; width: 96px; height: 96px; border-radius: 50%;
+    border: 2px solid rgba(255, 233, 201, .5); background: rgba(60, 50, 88, .45);
+    transform: translate(-50%, -50%); display: none;
+  }
+  #joyknob {
+    position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; border-radius: 50%;
+    background: rgba(240, 128, 32, .8); transform: translate(-50%, -50%);
+  }
+  #touch button {
+    position: fixed; z-index: 8; bottom: 5vh;
+    width: 17vmin; height: 17vmin; min-width: 56px; min-height: 56px;
+    border-radius: 50%; border: 2px solid rgba(255, 233, 201, .5);
+    background: rgba(60, 50, 88, .55); color: #ffe9c9;
+    font-family: inherit; font-size: 6vmin; font-weight: bold;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #touch button:active { background: rgba(240, 128, 32, .65); }
+  #btnA { right: 4vw; }
+  #btnB { right: calc(4vw + 19vmin); }
+</style>
+</head>
+<body>
+  <div id="game"></div>
+
+  <div id="hud">
+    <span class="ball">● <span id="hudBalls">0</span>/<span id="hudTotal">0</span></span>
+    <span class="score" id="hudScore">000000</span>
+    <span id="hudLives">🐾🐾🐾</span>
+    <div id="superwrap"><div id="superbar"><div id="superfill"></div></div><span>SUPER NOVA</span></div>
+  </div>
+
+  <div id="joyzone" hidden><div id="joybase"><div id="joyknob"></div></div></div>
+  <div id="touch" hidden>
+    <button id="btnB" aria-label="Courir">B</button>
+    <button id="btnA" aria-label="Sauter">A</button>
+  </div>
+
+  <div id="ovTitle" class="overlay">
+    <h1>NOVA 64</h1>
+    <h2>Les Collines de Valenciennes — en 3D</h2>
+    <p id="ctrlsDesk">ZQSD / flèches bouger · MAJ courir · ESPACE sauter</p>
+    <p id="ctrlsTouch" hidden>Joystick à gauche · B courir · A sauter</p>
+    <p>Ramasse les baballes, écrase les matous,</p>
+    <p>trouve la SUPER BABALLE et plante le drapeau au sommet !</p>
+    <p class="go">— Clique ou touche pour jouer —</p>
+    <p><a href="../" style="color:#8d86a8">← retour à NOVA 2D</a></p>
+  </div>
+
+  <div id="ovWin" class="overlay" hidden>
+    <h1 style="font-size:min(10vw,54px)">SOMMET ATTEINT !</h1>
+    <p class="big" id="winStats"></p>
+    <p class="go">— Clique pour rejouer —</p>
+  </div>
+
+  <div id="ovOver" class="overlay" hidden>
+    <h1 style="font-size:min(10vw,54px);color:#d8434e">GAME OVER</h1>
+    <p class="big" id="overStats"></p>
+    <p class="go">— Clique pour réessayer —</p>
+  </div>
+
+  <script type="importmap">
+    { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
+  </script>
+  <script type="module" src="nova64.js"></script>
+</body>
+</html>
