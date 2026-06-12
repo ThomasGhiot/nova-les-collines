@@ -85,9 +85,10 @@
     -webkit-tap-highlight-color: transparent;
   }
   #touch button:active { background: rgba(255, 140, 40, .65); }
-  #btnA, #btnB { bottom: 5vh; width: 17vmin; height: 17vmin; min-width: 56px; min-height: 56px; font-size: 6vmin; }
+  #btnA, #btnB, #btnW { bottom: 5vh; width: 17vmin; height: 17vmin; min-width: 56px; min-height: 56px; font-size: 6vmin; }
   #btnA { right: 4vw; }
   #btnB { right: calc(4vw + 19vmin); }
+  #btnW { right: calc(4vw + 38vmin); color: #ffd23e; }
   #btnCL, #btnCR { bottom: calc(5vh + 19vmin); width: 11vmin; height: 11vmin; min-width: 42px; min-height: 42px; font-size: 4.5vmin; }
   #btnCR { right: 4vw; }
   #btnCL { right: calc(4vw + 13vmin); }
@@ -111,6 +112,7 @@
   <div id="touch" hidden>
     <button id="btnCL" aria-label="Caméra gauche">⟲</button>
     <button id="btnCR" aria-label="Caméra droite">⟳</button>
+    <button id="btnW" aria-label="Aboyer">W!</button>
     <button id="btnB" aria-label="Courir / Charge">B</button>
     <button id="btnA" aria-label="Sauter">A</button>
   </div>
@@ -118,9 +120,9 @@
   <div id="ovTitle" class="overlay">
     <h1>NOVA SUNSHINE</h1>
     <h2>La Baie des Baballes</h2>
-    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · MAJ en l'air : CHARGE AU SOL<br>
-      Q/E tourner la caméra · C recentrer · MAJ au sol marcher · P pause</p>
-    <p id="ctrlsTouch" hidden>Joystick à gauche · A sauter · B courir (en l'air : charge au sol) · ⟲⟳ caméra</p>
+    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · <b style="color:#ffe34a">F : WOUF !</b> · MAJ en l'air : charge au sol<br>
+      Q/E tourner la caméra · C recentrer · P pause</p>
+    <p id="ctrlsTouch" hidden>Joystick à gauche · A sauter · B courir (en l'air : charge) · <b style="color:#ffe34a">W! : WOUF</b> · ⟲⟳ caméra</p>
     <p>Va voir le <b style="color:#ffe34a">Capitaine Médor</b> : il a 5 missions pour toi.</p>
     <p class="go">— Clique ou touche pour jouer —</p>
     <p id="bestLine" style="color:#9ec8dd"></p>

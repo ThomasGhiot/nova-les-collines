@@ -73,6 +73,13 @@ const SFX = {
   ring() { tone({ f0: 1175, f1: 1568, dur: 0.12, type: 'sine', vol: 0.1 }); },
   raceGo() { tone({ f0: 660, dur: 0.12, vol: 0.1 }); tone({ f0: 660, dur: 0.12, vol: 0.1, delay: 0.25 }); tone({ f0: 990, dur: 0.3, vol: 0.12, delay: 0.5 }); },
   gull() { tone({ f0: 1350, f1: 1050, dur: 0.16, type: 'sine', vol: 0.035 }); tone({ f0: 1280, f1: 880, dur: 0.22, type: 'sine', vol: 0.03, delay: 0.22 }); },
+  bigBark() {                                                          // le WOUF qui fait fuir les matous
+    bark(0.8); bark(0.65, 0.09);
+    noise({ dur: 0.22, vol: 0.16, f: 650 });
+    tone({ f0: 180, f1: 60, dur: 0.25, type: 'sawtooth', vol: 0.1 });
+  },
+  scaredMeow() { tone({ f0: 880, f1: 1400, dur: 0.14, type: 'sawtooth', vol: 0.07 }); tone({ f0: 1300, f1: 700, dur: 0.12, type: 'sawtooth', vol: 0.06, delay: 0.14 }); },
+  coco() { noise({ dur: 0.08, vol: 0.18, f: 350 }); tone({ f0: 220, f1: 90, dur: 0.12, type: 'triangle', vol: 0.14 }); },
 };
 function ambience() {
   if (!AC || state !== 'play' || !musicOn) return;
@@ -298,6 +305,7 @@ const blobShadow = (() => {
 
 /* ---------- végétation ---------- */
 const trees = [];
+const palms = [];
 for (let i = 0; i < 26; i++) {
   const a = rand(i) * Math.PI * 2, r = 60 + rand(i + 50) * 32;
   const x = Math.cos(a) * r, z = Math.sin(a) * r;
@@ -325,6 +333,7 @@ for (let i = 0; i < 26; i++) {
   g.position.set(x, h, z);
   scene.add(shadowed(g));
   trees.push({ x, z, r: 0.6 });
+  palms.push({ x: x + top.x, z, topY: h + top.y, cocoCD: 0 });
 }
 for (let i = 0; i < 10; i++) {
   const a = rand(i + 200) * Math.PI * 2, r = 14 + rand(i + 250) * 30;
@@ -533,6 +542,12 @@ const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 8, 24), new THREE.M
 ring.rotation.x = Math.PI / 2;
 ring.visible = false;
 scene.add(ring);
+/* onde sonore du WOUF */
+const barkRing = new THREE.Mesh(new THREE.TorusGeometry(1, 0.12, 8, 28), new THREE.MeshBasicMaterial({ color: 0xfff4be, transparent: true, opacity: 0.8 }));
+barkRing.rotation.x = Math.PI / 2;
+barkRing.visible = false;
+scene.add(barkRing);
+let barkT = 1;
 nova.scale.setScalar(1.12);
 scene.add(shadowed(nova));
 
@@ -579,6 +594,7 @@ const MEDOR_LINES = [
   '<b>Capitaine Médor</b> — Mes missions sont notées en haut à droite. La <b>SUPER BABALLE</b> brille au bout du ponton !',
   '<b>Capitaine Médor</b> — L\'arche dorée sur la plage lance ma course. Et mes 3 <b>nonos</b> ont disparu : plage nord-ouest, haute plateforme, et... dans le lagon !',
   '<b>Capitaine Médor</b> — En l\'air, fais une <b>charge au sol</b> (MAJ ou B) : les matous détestent ça. Wouf wouf !',
+  '<b>Capitaine Médor</b> — Et surtout : <b>ABOIE</b> (F, ou le bouton W) ! Les matous filent ventre à terre... et les noix de coco tombent des palmiers. Boum !',
 ];
 let medorLine = 0, medorNear = false, medorTimer = 0;
 
@@ -607,7 +623,7 @@ for (const [x, z] of CAT_SPOTS) {
   const g = buildCat();
   g.position.set(x, terrainH(x, z), z);
   scene.add(g);
-  cats.push({ g, x, z, dir: rand(x + z) * Math.PI * 2, timer: 1 + rand(x) * 3, dead: false, deadT: 0 });
+  cats.push({ g, x, z, dir: rand(x + z) * Math.PI * 2, timer: 1 + rand(x) * 3, dead: false, deadT: 0, scared: 0 });
 }
 
 const gulls = [];
@@ -720,10 +736,13 @@ let state = 'title', paused = false, score = 0, ballN = 0, lives = 3;
 let superT = 0, transT = 0, playT = 0;
 let camYaw = 0, camManual = 0, camShake = 0, camH = 4.4, camDist = 11, gT = 0;
 let catsSquashed = 0, bonesGot = 0, flagDone = false;
+let barkCD = 0, scaredCount = 0;
+const cocos = [];
 
 const QUESTS = [
   { label: 'Ramasse 25 baballes', done: false, prog: () => `${Math.min(ballN, 25)}/25`, check: () => ballN >= 25 },
   { label: 'Fais valdinguer 6 matous', done: false, prog: () => `${Math.min(catsSquashed, 6)}/6`, check: () => catsSquashed >= 6 },
+  { label: 'Effraie 8 matous au WOUF', done: false, prog: () => `${Math.min(scaredCount, 8)}/8`, check: () => scaredCount >= 8 },
   { label: 'Gagne la course de l\'arche', done: false, prog: () => '', check: () => raceDone },
   { label: 'Déterre les 3 nonos cachés', done: false, prog: () => `${bonesGot}/3`, check: () => bonesGot >= 3 },
   { label: 'Plante le drapeau au sommet', done: false, prog: () => '', check: () => flagDone },
@@ -770,6 +789,7 @@ addEventListener('keydown', e => {
   if (paused) { if (e.code === 'KeyR') { paused = false; document.getElementById('ovPause').hidden = true; restart(); } return; }
   if (e.code === 'KeyR') { restart(); return; }
   if (e.code === 'KeyC') { camYaw = P.yaw + Math.PI; camManual = 0.6; return; }
+  if (e.code === 'KeyF') { doBark(); return; }
   if (e.code === 'Space') P.jbuf = 0.15;
   if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight') && !P.onGround && !P.swimming && !P.pound && state === 'play') {
     P.pound = 1; P.poundT = 0;
@@ -828,6 +848,7 @@ const joy = { active: false, id: null, x: 0, y: 0, sx: 0, sy: 0 };
   }, () => { btnB = false; });
   on('btnCL', () => { camL = true; }, () => { camL = false; });
   on('btnCR', () => { camR = true; }, () => { camR = false; });
+  on('btnW', () => { if (state === 'play') doBark(); });
 })();
 for (const id of ['ovTitle', 'ovWin', 'ovOver']) {
   document.getElementById(id).addEventListener('pointerdown', () => { initAudio(); restart(); });
@@ -862,6 +883,84 @@ function catKill(c) {
   burst(c.g.position.clone().setY(c.g.position.y + 0.6), 0x9aa3b8, 6, 4, 4);
   updateHUD();
 }
+
+/* ---------- le WOUF : aboiement qui terrorise les matous ---------- */
+function doBark() {
+  if (state !== 'play' || paused || barkCD > 0 || P.swimming) return;
+  barkCD = 2.2;
+  SFX.bigBark();
+  barkT = 0;
+  barkRing.visible = true;
+  barkRing.position.set(P.pos.x, P.pos.y + 0.8, P.pos.z);
+  const R = superT > 0 ? 15 : 9;                 // méga-WOUF en Super Nova
+  for (const c of cats) {
+    if (c.dead) continue;
+    const d = Math.hypot(c.g.position.x - P.pos.x, c.g.position.z - P.pos.z);
+    if (d < R) {
+      if (superT > 0) { catKill(c); continue; }
+      if (c.scared <= 0) { scaredCount++; SFX.scaredMeow(); }
+      c.scared = 3;
+      c.dir = Math.atan2(c.g.position.x - P.pos.x, c.g.position.z - P.pos.z);
+      burst(c.g.position.clone().setY(c.g.position.y + 1.1), 0xffffff, 4, 2, 3.5, 0.5, 0.3);
+    }
+  }
+  // le WOUF secoue les palmiers proches : les noix de coco tombent !
+  for (const p of palms) {
+    const d = Math.hypot(p.x - P.pos.x, p.z - P.pos.z);
+    if (d < 6 && p.cocoCD <= 0) {
+      p.cocoCD = 7;
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 6), M.trunk);
+      m.castShadow = true;
+      m.position.set(p.x, p.topY - 0.4, p.z);
+      scene.add(m);
+      cocos.push({ m, v: 0, rest: 0 });
+    }
+  }
+}
+function updateCocos(dt) {
+  for (const p of palms) if (p.cocoCD > 0) p.cocoCD -= dt;
+  for (let i = cocos.length - 1; i >= 0; i--) {
+    const c = cocos[i];
+    const gnd = terrainH(c.m.position.x, c.m.position.z) + 0.24;
+    if (c.rest > 0) {
+      c.rest -= dt;
+    } else {
+      c.v -= 30 * dt;
+      c.m.position.y += c.v * dt;
+      if (c.m.position.y <= gnd) {
+        c.m.position.y = gnd;
+        if (Math.abs(c.v) > 4) { c.v = -c.v * 0.35; SFX.coco(); burst(c.m.position, 0xd8cfa8, 4, 2, 2, 0.4, 0.3); }
+        else { c.v = 0; c.rest = 6; }
+      }
+      // une noix de coco sur la tête d'un matou...
+      for (const cat of cats) {
+        if (cat.dead) continue;
+        const d = Math.hypot(cat.g.position.x - c.m.position.x, cat.g.position.z - c.m.position.z);
+        if (d < 1.1 && Math.abs(c.m.position.y - cat.g.position.y - 0.6) < 1) {
+          catKill(cat);
+          scene.remove(c.m);
+          cocos.splice(i, 1);
+          break;
+        }
+      }
+    }
+    if (cocos[i] !== c) continue;
+    // Nova peut la ramasser une fois au sol (+100)
+    if (c.rest > 0) {
+      const d = Math.hypot(c.m.position.x - P.pos.x, c.m.position.z - P.pos.z);
+      if (d < 1.4 && Math.abs(c.m.position.y - P.pos.y) < 1.6) {
+        score += 100;
+        SFX.coin();
+        burst(c.m.position, 0xc8a060, 5, 3, 3, 0.5, 0.35);
+        scene.remove(c.m);
+        cocos.splice(i, 1);
+        updateHUD();
+        continue;
+      }
+      if (c.rest <= dt) { scene.remove(c.m); cocos.splice(i, 1); }
+    }
+  }
+}
 function gameOver() {
   state = 'gameover';
   document.getElementById('overStats').textContent = `Score : ${score} · Baballes : ${ballN}/${TOTAL_BALLS}`;
@@ -887,6 +986,11 @@ function restart() {
   score = 0; ballN = 0; lives = 3; superT = 0; transT = 0; playT = 0; barIdx = 0;
   catsSquashed = 0; bonesGot = 0; flagDone = false;
   raceIdx = -1; raceT = 0; raceDone = false;
+  barkCD = 0; scaredCount = 0;
+  for (const c of cocos) scene.remove(c.m);
+  cocos.length = 0;
+  for (const p of palms) p.cocoCD = 0;
+  barkRing.visible = false; barkT = 1;
   for (const q of QUESTS) q.done = false;
   P.pos.set(START.x, terrainH(START.x, START.z), START.z);
   P.v.set(0, 0, 0); P.yaw = Math.PI; P.inv = 0;
@@ -898,8 +1002,8 @@ function restart() {
   for (const b of bones) { b.got = false; b.g.visible = true; }
   superBall.got = false; superBall.respawn = 0; superBall.g.visible = true;
   for (const c of cats) {
-    c.dead = false; c.deadT = 0;
-    c.g.visible = true; c.g.scale.set(1, 1, 1);
+    c.dead = false; c.deadT = 0; c.scared = 0;
+    c.g.visible = true; c.g.scale.set(1, 1, 1); c.g.rotation.z = 0;
     c.g.position.set(c.x, terrainH(c.x, c.z), c.z);
   }
   medorLine = 0;
@@ -1071,14 +1175,20 @@ function updateCats(dt) {
       if (c.deadT > 0.9) c.g.visible = false;
       continue;
     }
-    c.timer -= dt;
-    if (c.timer <= 0) { c.dir = rand(gT + c.x) * Math.PI * 2; c.timer = 1.5 + rand(gT + c.z) * 2.5; }
-    const nx = c.g.position.x + Math.sin(c.dir) * 3 * dt;
-    const nz = c.g.position.z + Math.cos(c.dir) * 3 * dt;
-    if (terrainH(nx, nz) < 2.2) { c.dir += Math.PI; continue; }
+    const fleeing = c.scared > 0;
+    if (fleeing) c.scared -= dt;
+    else {
+      c.timer -= dt;
+      if (c.timer <= 0) { c.dir = rand(gT + c.x) * Math.PI * 2; c.timer = 1.5 + rand(gT + c.z) * 2.5; }
+    }
+    const spd = fleeing ? 8.5 : 3;
+    const nx = c.g.position.x + Math.sin(c.dir) * spd * dt;
+    const nz = c.g.position.z + Math.cos(c.dir) * spd * dt;
+    if (terrainH(nx, nz) < 2.2) { c.dir += fleeing ? 2.4 : Math.PI; continue; }
     c.g.position.x = nx; c.g.position.z = nz;
-    c.g.position.y = terrainH(nx, nz);
+    c.g.position.y = terrainH(nx, nz) + (fleeing ? Math.abs(Math.sin(gT * 11)) * 0.25 : 0);
     c.g.rotation.y = c.dir;
+    c.g.rotation.z = fleeing ? Math.sin(gT * 14) * 0.12 : 0;
 
     const dx = P.pos.x - nx, dz = P.pos.z - nz;
     const dy = P.pos.y - c.g.position.y;
@@ -1088,8 +1198,8 @@ function updateCats(dt) {
       } else if (P.v.y < -2 && dy > 0.45) {
         catKill(c);
         P.v.y = keys.Space ? 14 : 10;
-      } else {
-        hurt(c.g.position);
+      } else if (!fleeing) {
+        hurt(c.g.position);          // un matou en fuite ne griffe pas
       }
     }
   }
@@ -1259,11 +1369,11 @@ function doWin() {
   state = 'win';
   SFX.win();
   const done = QUESTS.filter(q => q.done).length;
-  const rank = done >= 5 ? 'S' : done >= 4 ? 'A' : done >= 3 ? 'B' : 'C';
+  const rank = done >= 6 ? 'S' : done >= 5 ? 'A' : done >= 4 ? 'B' : 'C';
   document.getElementById('winRank').textContent = rank;
   document.getElementById('winStats').textContent =
     `Score : ${score} · Baballes : ${ballN}/${TOTAL_BALLS} · Temps : ${Math.floor(playT)} s`;
-  document.getElementById('winQuests').textContent = `Missions accomplies : ${done}/5` + (done >= 5 ? ' — L\'OS D\'OR EST À TOI ! 🦴' : '');
+  document.getElementById('winQuests').textContent = `Missions accomplies : ${done}/6` + (done >= 6 ? ' — L\'OS D\'OR EST À TOI ! 🦴' : '');
   document.getElementById('ovWin').hidden = false;
   try {
     const prev = JSON.parse(localStorage.getItem('novaSunshineBest') || 'null');
@@ -1299,6 +1409,12 @@ function step(dt) {
     sp.s.material.opacity = Math.max(0, Math.sin(sp.t / 3 * Math.PI)) * 0.5;
   }
   updateParts(dt);
+  if (barkT < 1) {
+    barkT += dt * 2.6;
+    barkRing.scale.setScalar(0.5 + barkT * (superT > 0 ? 15 : 9));
+    barkRing.material.opacity = Math.max(0, 0.8 * (1 - barkT));
+    if (barkT >= 1) barkRing.visible = false;
+  }
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) document.getElementById('toast').style.display = 'none'; }
 
   if (state === 'play') {
@@ -1316,9 +1432,11 @@ function step(dt) {
     }
     document.getElementById('superwrap').style.display = superT > 0 ? 'flex' : 'none';
 
+    if (barkCD > 0) barkCD -= dt;
     updatePlayer(dt);
     updateCats(dt);
     updateBalls(dt);
+    updateCocos(dt);
     updateRace(dt);
     updateFauna(dt);
 
@@ -1438,9 +1556,12 @@ window.NGC = {
   get raceDone() { return raceDone; },
   get bonesGot() { return bonesGot; },
   get catsSquashed() { return catsSquashed; },
+  get scaredCount() { return scaredCount; },
+  get cocos() { return cocos; },
+  doBark,
   get quests() { return QUESTS.map(q => ({ label: q.label, done: q.done })); },
   cats, balls, bones, superBall, raceRings, raceArch, terrainH, restart,
-  renderer, camera,
+  renderer, camera, palms,
   press(c) { keys[c] = true; }, release(c) { keys[c] = false; },
   jump() { P.jbuf = 0.15; },
   pound() { if (!P.onGround && !P.pound) { P.pound = 1; P.poundT = 0; } },
