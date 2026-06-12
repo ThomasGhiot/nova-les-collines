@@ -64,6 +64,21 @@
   .overlay .big { font-size: min(6vw, 26px); color: #fff; }
   .overlay .rank { font-size: min(20vw, 110px); color: #ffe34a; margin: 8px 0; text-shadow: 6px 6px 0 rgba(10, 60, 90, .8); }
   @keyframes blink { 50% { opacity: 0; } }
+  .board { border-collapse: collapse; margin: 10px auto; font-size: min(3.6vw, 15px); }
+  .board td, .board th { padding: 3px 12px; color: #d8f4ff; text-align: left; }
+  .board th { color: #ffe34a; border-bottom: 1px solid rgba(216,244,255,.4); }
+  .board tr.hi td { color: #ffe34a; font-weight: bold; }
+  .board td.sc { text-align: right; }
+  #nameForm input {
+    font-family: inherit; font-size: 18px; padding: 8px 12px; width: 180px;
+    border-radius: 8px; border: 2px solid #ffe34a; background: rgba(8,32,54,.8); color: #fff;
+    text-transform: uppercase; outline: none;
+  }
+  #nameForm button, #btnReplay {
+    font-family: inherit; font-size: 17px; font-weight: bold; padding: 9px 22px; margin-left: 8px;
+    border-radius: 8px; border: none; background: #ffe34a; color: #5a3a08; cursor: pointer;
+  }
+  #btnReplay { margin-top: 18px; font-size: 19px; }
   [hidden] { display: none !important; }
 
   #joyzone { position: fixed; left: 0; bottom: 0; width: 45vw; height: 55vh; z-index: 8; touch-action: none; }
@@ -89,9 +104,11 @@
   #btnA { right: 4vw; }
   #btnB { right: calc(4vw + 19vmin); }
   #btnW { right: calc(4vw + 38vmin); color: #ffd23e; }
-  #btnCL, #btnCR { bottom: calc(5vh + 19vmin); width: 11vmin; height: 11vmin; min-width: 42px; min-height: 42px; font-size: 4.5vmin; }
+  #btnCL, #btnCR, #btnCC { bottom: calc(5vh + 19vmin); width: 11vmin; height: 11vmin; min-width: 42px; min-height: 42px; font-size: 4.5vmin; }
   #btnCR { right: 4vw; }
-  #btnCL { right: calc(4vw + 13vmin); }
+  #btnCC { right: calc(4vw + 13vmin); }
+  #btnCL { right: calc(4vw + 26vmin); }
+  #btnP { position: fixed; top: 54px; left: 12px; width: 10vmin; height: 10vmin; min-width: 40px; min-height: 40px; font-size: 4vmin; z-index: 8; }
 </style>
 </head>
 <body>
@@ -100,6 +117,7 @@
   <div id="hud">
     <span class="ball">● <span id="hudBalls">0</span>/<span id="hudTotal">0</span></span>
     <span class="score" id="hudScore">000000</span>
+    <span id="hudTime" style="color:#d8f4ff">5:00</span>
     <span id="hudLives">🐾🐾🐾</span>
     <div id="superwrap"><div id="superbar"><div id="superfill"></div></div><span>SUPER NOVA</span></div>
   </div>
@@ -110,22 +128,25 @@
 
   <div id="joyzone" hidden><div id="joybase"><div id="joyknob"></div></div></div>
   <div id="touch" hidden>
+    <button id="btnP" aria-label="Pause">⏸</button>
     <button id="btnCL" aria-label="Caméra gauche">⟲</button>
+    <button id="btnCC" aria-label="Recentrer la caméra">◎</button>
     <button id="btnCR" aria-label="Caméra droite">⟳</button>
     <button id="btnW" aria-label="Aboyer">W!</button>
-    <button id="btnB" aria-label="Courir / Charge">B</button>
+    <button id="btnB" aria-label="Marcher / Charge">B</button>
     <button id="btnA" aria-label="Sauter">A</button>
   </div>
 
   <div id="ovTitle" class="overlay">
     <h1>NOVA SUNSHINE</h1>
     <h2>La Baie des Baballes</h2>
-    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · <b style="color:#ffe34a">F : WOUF !</b> · MAJ en l'air : charge au sol<br>
+    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · <b style="color:#ffe34a">F : WOUF !</b> · MAJ : marcher (au sol) / charge (en l'air)<br>
       Q/E tourner la caméra · C recentrer · P pause</p>
-    <p id="ctrlsTouch" hidden>Joystick à gauche · A sauter · B courir (en l'air : charge) · <b style="color:#ffe34a">W! : WOUF</b> · ⟲⟳ caméra</p>
+    <p id="ctrlsTouch" hidden>Joystick bouger · A sauter · B marcher (en l'air : charge) · <b style="color:#ffe34a">W! WOUF</b><br>⟲ ◎ ⟳ caméra · ⏸ pause</p>
     <p>Va voir le <b style="color:#ffe34a">Capitaine Médor</b> : il a 5 missions pour toi.</p>
+    <p>⏱ <b style="color:#ffe34a">5 minutes</b> au chrono — chaque seconde restante au drapeau rapporte 10 points !</p>
     <p class="go">— Clique ou touche pour jouer —</p>
-    <p id="bestLine" style="color:#9ec8dd"></p>
+    <div id="titleBoard"></div>
     <p><a href="../64/" style="color:#9ec8dd">← NOVA 64</a> · <a href="../" style="color:#9ec8dd">NOVA 2D</a></p>
   </div>
 
@@ -134,12 +155,18 @@
     <p class="big">P pour reprendre · R pour recommencer</p>
   </div>
 
-  <div id="ovWin" class="overlay" hidden>
+  <div id="ovWin" class="overlay" style="cursor:default" hidden>
     <h1 style="font-size:min(9vw,48px)">SOMMET ATTEINT !</h1>
     <div class="rank" id="winRank">A</div>
     <p class="big" id="winStats"></p>
     <p id="winQuests"></p>
-    <p class="go">— Clique pour rejouer —</p>
+    <div id="nameForm" style="margin-top:14px">
+      <p style="color:#ffe34a;font-weight:bold">Inscris ton nom au tableau des records :</p>
+      <input id="nameInput" maxlength="12" placeholder="NOVA" autocomplete="off">
+      <button id="nameOk">OK</button>
+    </div>
+    <div id="winBoard"></div>
+    <button id="btnReplay" hidden>REJOUER</button>
   </div>
 
   <div id="ovOver" class="overlay" hidden>

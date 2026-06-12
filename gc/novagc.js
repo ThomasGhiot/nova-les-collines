@@ -734,6 +734,8 @@ const P = {
 };
 let state = 'title', paused = false, score = 0, ballN = 0, lives = 3;
 let superT = 0, transT = 0, playT = 0;
+const TIME_LIMIT = 300;                 // 5 minutes pour tout faire
+let timeLeft = TIME_LIMIT, lastWhole = TIME_LIMIT;
 let camYaw = 0, camManual = 0, camShake = 0, camH = 4.4, camDist = 11, gT = 0;
 let catsSquashed = 0, bonesGot = 0, flagDone = false;
 let barkCD = 0, scaredCount = 0;
@@ -775,12 +777,17 @@ function checkQuests() {
 const keys = {};
 let btnB = false, camL = false, camR = false;
 addEventListener('keydown', e => {
+  if (e.target && e.target.tagName === 'INPUT') {
+    if (e.key === 'Enter') submitName();
+    return;                              // on tape son nom : le jeu n'écoute pas
+  }
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
   if (e.repeat) return;
   initAudio();
   if (e.code === 'KeyM') { musicOn = !musicOn; return; }
-  if (state === 'title' || state === 'win' || state === 'gameover') { restart(); return; }
+  if (state === 'win') { if (e.code === 'KeyR') restart(); return; }
+  if (state === 'title' || state === 'gameover') { restart(); return; }
   if (e.code === 'KeyP' && state === 'play') {
     paused = !paused;
     document.getElementById('ovPause').hidden = !paused;
@@ -848,21 +855,24 @@ const joy = { active: false, id: null, x: 0, y: 0, sx: 0, sy: 0 };
   }, () => { btnB = false; });
   on('btnCL', () => { camL = true; }, () => { camL = false; });
   on('btnCR', () => { camR = true; }, () => { camR = false; });
+  on('btnCC', () => { camYaw = P.yaw + Math.PI; camManual = 0.6; });
   on('btnW', () => { if (state === 'play') doBark(); });
+  on('btnP', () => {
+    if (state !== 'play') return;
+    paused = !paused;
+    document.getElementById('ovPause').hidden = !paused;
+  });
 })();
-for (const id of ['ovTitle', 'ovWin', 'ovOver']) {
+for (const id of ['ovTitle', 'ovOver']) {
   document.getElementById(id).addEventListener('pointerdown', () => { initAudio(); restart(); });
 }
 document.getElementById('ovPause').addEventListener('pointerdown', () => {
   paused = false;
   document.getElementById('ovPause').hidden = true;
 });
-(function showBest() {
-  try {
-    const b = JSON.parse(localStorage.getItem('novaSunshineBest') || 'null');
-    if (b) document.getElementById('bestLine').textContent = `Record : rang ${b.rank} · ${b.score} pts`;
-  } catch (e) {}
-})();
+document.getElementById('nameOk').addEventListener('click', e => { e.stopPropagation(); submitName(); });
+document.getElementById('btnReplay').addEventListener('click', e => { e.stopPropagation(); restart(); });
+renderTitleBoard();
 
 /* ---------------------------------------------------------------------
    LOGIQUE
@@ -961,11 +971,44 @@ function updateCocos(dt) {
     }
   }
 }
-function gameOver() {
+function gameOver(reason = '') {
   state = 'gameover';
-  document.getElementById('overStats').textContent = `Score : ${score} · Baballes : ${ballN}/${TOTAL_BALLS}`;
+  document.getElementById('overStats').textContent =
+    (reason ? reason + ' — ' : '') + `Score : ${score} · Baballes : ${ballN}/${TOTAL_BALLS}`;
   document.getElementById('ovOver').hidden = false;
   SFX.over();
+}
+
+/* ---------------------------------------------------------------------
+   TABLEAU DES RECORDS (local à l'appareil)
+--------------------------------------------------------------------- */
+function loadBoard() {
+  try { return JSON.parse(localStorage.getItem('novaSunshineBoard') || '[]'); } catch (e) { return []; }
+}
+function boardHTML(list, hi = -1) {
+  if (!list.length) return '<p style="color:#9ec8dd">Aucun record pour l\'instant… sois la première truffe !</p>';
+  return '<table class="board"><tr><th>#</th><th>NOM</th><th>SCORE</th><th>RANG</th><th>⏱</th></tr>' +
+    list.map((e, i) =>
+      `<tr class="${i === hi ? 'hi' : ''}"><td>${i + 1}</td><td>${e.name}</td><td class="sc">${e.score}</td><td>${e.rank}</td><td>${e.time}s</td></tr>`
+    ).join('') + '</table>';
+}
+function saveScore(name, rank) {
+  const list = loadBoard();
+  const entry = { name, score, rank, time: Math.floor(playT), date: Date.now() };
+  list.push(entry);
+  list.sort((a, b) => b.score - a.score);
+  const top = list.slice(0, 8);
+  const hi = top.indexOf(entry);
+  try {
+    localStorage.setItem('novaSunshineBoard', JSON.stringify(top));
+    localStorage.setItem('novaPlayerName', name);
+  } catch (e) {}
+  return { top, hi };
+}
+function renderTitleBoard() {
+  const el = document.getElementById('titleBoard');
+  const list = loadBoard().slice(0, 5);
+  el.innerHTML = list.length ? '<p style="color:#ffe34a;font-weight:bold;margin-top:14px">🏆 TABLEAU DES RECORDS</p>' + boardHTML(list) : '';
 }
 function hurt(knockFrom) {
   if (P.inv > 0 || superT > 0 || state !== 'play') return;
@@ -986,6 +1029,7 @@ function restart() {
   score = 0; ballN = 0; lives = 3; superT = 0; transT = 0; playT = 0; barIdx = 0;
   catsSquashed = 0; bonesGot = 0; flagDone = false;
   raceIdx = -1; raceT = 0; raceDone = false;
+  timeLeft = TIME_LIMIT; lastWhole = TIME_LIMIT;
   barkCD = 0; scaredCount = 0;
   for (const c of cocos) scene.remove(c.m);
   cocos.length = 0;
@@ -1007,6 +1051,8 @@ function restart() {
     c.g.position.set(c.x, terrainH(c.x, c.z), c.z);
   }
   medorLine = 0;
+  document.getElementById('hudTime').textContent = '5:00';
+  document.getElementById('hudTime').style.color = '#d8f4ff';
   document.getElementById('raceTimer').style.display = 'none';
   document.getElementById('dialog').style.display = 'none';
   for (const id of ['ovTitle', 'ovWin', 'ovOver', 'ovPause']) document.getElementById(id).hidden = true;
@@ -1023,8 +1069,8 @@ function updatePlayer(dt) {
   if (joy.active) { ix = joy.x; iz = joy.y; }
   let l = Math.hypot(ix, iz);
   if (l > 1) { ix /= l; iz /= l; l = 1; }
-  const walk = (keys.ShiftLeft || keys.ShiftRight || btnB) && P.onGround ? false : false;
-  const run = true;
+  /* MAJ (clavier) ou B (mobile) au sol : marche précise pour le ponton */
+  const walk = (keys.ShiftLeft || keys.ShiftRight || btnB) && P.onGround;
 
   const fw = new THREE.Vector3(Math.sin(camYaw), 0, Math.cos(camYaw));
   const rt = new THREE.Vector3(fw.z, 0, -fw.x);
@@ -1073,7 +1119,7 @@ function updatePlayer(dt) {
         const f = Math.max(0, 1 - 40 * dt / spd);
         P.v.x *= f; P.v.z *= f;
       } else {
-        const maxSpd = 10.5 * l;
+        const maxSpd = (walk ? 4.5 : 10.5) * l;
         const acc = P.onGround ? 42 : 16;
         P.v.x += wish.x * acc * dt;
         P.v.z += wish.z * acc * dt;
@@ -1363,24 +1409,40 @@ function updateHUD() {
 updateHUD();
 refreshQuests();
 
+let winRank = 'C';
 function doWin() {
   flagDone = true;
   checkQuests();
   state = 'win';
   SFX.win();
+  const bonus = Math.max(0, Math.floor(timeLeft)) * 10;   // bonus chrono
+  score += bonus;
+  updateHUD();
   const done = QUESTS.filter(q => q.done).length;
-  const rank = done >= 6 ? 'S' : done >= 5 ? 'A' : done >= 4 ? 'B' : 'C';
-  document.getElementById('winRank').textContent = rank;
+  winRank = done >= 6 ? 'S' : done >= 5 ? 'A' : done >= 4 ? 'B' : 'C';
+  document.getElementById('winRank').textContent = winRank;
   document.getElementById('winStats').textContent =
-    `Score : ${score} · Baballes : ${ballN}/${TOTAL_BALLS} · Temps : ${Math.floor(playT)} s`;
+    `Score : ${score} (dont bonus chrono +${bonus}) · Baballes : ${ballN}/${TOTAL_BALLS} · Temps : ${Math.floor(playT)} s`;
   document.getElementById('winQuests').textContent = `Missions accomplies : ${done}/6` + (done >= 6 ? ' — L\'OS D\'OR EST À TOI ! 🦴' : '');
+  // formulaire de nom pour le tableau des records
+  document.getElementById('nameForm').hidden = false;
+  document.getElementById('winBoard').innerHTML = '';
+  document.getElementById('btnReplay').hidden = true;
+  const inp = document.getElementById('nameInput');
+  try { inp.value = localStorage.getItem('novaPlayerName') || ''; } catch (e) { inp.value = ''; }
   document.getElementById('ovWin').hidden = false;
-  try {
-    const prev = JSON.parse(localStorage.getItem('novaSunshineBest') || 'null');
-    const order = { S: 4, A: 3, B: 2, C: 1 };
-    if (!prev || order[rank] > order[prev.rank] || (rank === prev.rank && score > prev.score))
-      localStorage.setItem('novaSunshineBest', JSON.stringify({ rank, score }));
-  } catch (e) {}
+  setTimeout(() => inp.focus(), 50);
+}
+function submitName() {
+  const inp = document.getElementById('nameInput');
+  const name = (inp.value.trim().toUpperCase() || 'NOVA').slice(0, 12);
+  const { top, hi } = saveScore(name, winRank);
+  document.getElementById('nameForm').hidden = true;
+  document.getElementById('winBoard').innerHTML =
+    '<p style="color:#ffe34a;font-weight:bold;margin-top:10px">🏆 TABLEAU DES RECORDS</p>' + boardHTML(top, hi);
+  document.getElementById('btnReplay').hidden = false;
+  renderTitleBoard();
+  SFX.quest();
 }
 
 /* ---------------------------------------------------------------------
@@ -1419,6 +1481,18 @@ function step(dt) {
 
   if (state === 'play') {
     playT += dt;
+    /* compte à rebours du niveau */
+    timeLeft -= dt;
+    const whole = Math.ceil(timeLeft);
+    if (whole !== lastWhole) {
+      lastWhole = whole;
+      const el = document.getElementById('hudTime');
+      const mm = Math.max(0, Math.floor(whole / 60)), ss = Math.max(0, whole % 60);
+      el.textContent = `${mm}:${String(ss).padStart(2, '0')}`;
+      el.style.color = whole <= 30 ? '#ff5a5a' : '#d8f4ff';
+      if (whole <= 10 && whole > 0) tone({ f0: 880, dur: 0.07, vol: 0.08 });
+    }
+    if (timeLeft <= 0) { gameOver('⏱ TEMPS ÉCOULÉ !'); return; }
     if (P.inv > 0) P.inv -= dt;
     if (superT > 0) {
       superT -= dt;
@@ -1558,7 +1632,9 @@ window.NGC = {
   get catsSquashed() { return catsSquashed; },
   get scaredCount() { return scaredCount; },
   get cocos() { return cocos; },
-  doBark,
+  get timeLeft() { return timeLeft; },
+  setTime(v) { timeLeft = v; lastWhole = Math.ceil(v) + 1; },
+  doBark, submitName,
   get quests() { return QUESTS.map(q => ({ label: q.label, done: q.done })); },
   cats, balls, bones, superBall, raceRings, raceArch, terrainH, restart,
   renderer, camera, palms,
