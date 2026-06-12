@@ -23,16 +23,46 @@
   #superfill { height: 100%; width: 100%; background: #ffe34a; }
   #superwrap span { color: #ffe34a; font-size: 12px; }
 
+  #quests {
+    position: fixed; top: 52px; right: 12px; z-index: 5; pointer-events: none;
+    background: rgba(8, 32, 54, .55); border-radius: 10px; padding: 10px 14px;
+    color: #d8f4ff; font-size: 13px; line-height: 1.75; min-width: 230px;
+    text-shadow: 1px 1px 0 rgba(10, 30, 50, .8);
+  }
+  #quests .t { color: #ffe34a; font-weight: bold; font-size: 12px; letter-spacing: 1px; }
+  #quests .done { color: #7de87d; }
+  #quests .done::after { content: ' ✓'; }
+
+  #raceTimer {
+    position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 6;
+    font-size: 42px; font-weight: bold; color: #ffe34a;
+    text-shadow: 3px 3px 0 rgba(10, 40, 70, .8); display: none;
+  }
+  #toast {
+    position: fixed; top: 22%; left: 50%; transform: translateX(-50%); z-index: 7;
+    background: rgba(255, 227, 74, .94); color: #5a3a08; font-weight: bold;
+    padding: 12px 26px; border-radius: 12px; font-size: 19px; text-align: center;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, .35); display: none; white-space: nowrap;
+  }
+  #dialog {
+    position: fixed; bottom: 12vh; left: 50%; transform: translateX(-50%); z-index: 7;
+    background: rgba(255, 252, 240, .96); color: #34404e; max-width: min(560px, 86vw);
+    padding: 14px 22px; border-radius: 14px; font-size: 15px; line-height: 1.5;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, .4); display: none;
+  }
+  #dialog b { color: #c8702a; }
+
   .overlay {
     position: fixed; inset: 0; z-index: 10; cursor: pointer; user-select: none;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    background: rgba(8, 30, 50, .5); color: #fff; text-align: center; padding: 0 16px;
+    background: rgba(8, 30, 50, .55); color: #fff; text-align: center; padding: 0 16px;
   }
-  .overlay h1 { font-size: min(13vw, 70px); color: #ffe34a; margin: 0 0 4px; text-shadow: 5px 5px 0 rgba(10, 60, 90, .8); }
-  .overlay h2 { font-size: min(4.5vw, 22px); color: #d8f4ff; margin: 0 0 22px; font-weight: normal; }
-  .overlay p { margin: 6px 0; color: #cfeaf8; font-size: min(3.8vw, 16px); }
-  .overlay .go { color: #ffe34a; font-size: min(5vw, 20px); margin-top: 26px; animation: blink 1s steps(1) infinite; }
+  .overlay h1 { font-size: min(12vw, 66px); color: #ffe34a; margin: 0 0 4px; text-shadow: 5px 5px 0 rgba(10, 60, 90, .8); }
+  .overlay h2 { font-size: min(4.5vw, 22px); color: #d8f4ff; margin: 0 0 20px; font-weight: normal; }
+  .overlay p { margin: 5px 0; color: #cfeaf8; font-size: min(3.8vw, 15px); }
+  .overlay .go { color: #ffe34a; font-size: min(5vw, 20px); margin-top: 24px; animation: blink 1s steps(1) infinite; }
   .overlay .big { font-size: min(6vw, 26px); color: #fff; }
+  .overlay .rank { font-size: min(20vw, 110px); color: #ffe34a; margin: 8px 0; text-shadow: 6px 6px 0 rgba(10, 60, 90, .8); }
   @keyframes blink { 50% { opacity: 0; } }
   [hidden] { display: none !important; }
 
@@ -47,17 +77,20 @@
     background: rgba(255, 140, 40, .85); transform: translate(-50%, -50%);
   }
   #touch button {
-    position: fixed; z-index: 8; bottom: 5vh;
-    width: 17vmin; height: 17vmin; min-width: 56px; min-height: 56px;
+    position: fixed; z-index: 8;
     border-radius: 50%; border: 2px solid rgba(216, 244, 255, .55);
     background: rgba(20, 70, 110, .55); color: #d8f4ff;
-    font-family: inherit; font-size: 6vmin; font-weight: bold;
+    font-family: inherit; font-weight: bold;
     touch-action: none; user-select: none; -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
   }
   #touch button:active { background: rgba(255, 140, 40, .65); }
+  #btnA, #btnB { bottom: 5vh; width: 17vmin; height: 17vmin; min-width: 56px; min-height: 56px; font-size: 6vmin; }
   #btnA { right: 4vw; }
   #btnB { right: calc(4vw + 19vmin); }
+  #btnCL, #btnCR { bottom: calc(5vh + 19vmin); width: 11vmin; height: 11vmin; min-width: 42px; min-height: 42px; font-size: 4.5vmin; }
+  #btnCR { right: 4vw; }
+  #btnCL { right: calc(4vw + 13vmin); }
 </style>
 </head>
 <body>
@@ -69,27 +102,41 @@
     <span id="hudLives">🐾🐾🐾</span>
     <div id="superwrap"><div id="superbar"><div id="superfill"></div></div><span>SUPER NOVA</span></div>
   </div>
+  <div id="quests"></div>
+  <div id="raceTimer">25.0</div>
+  <div id="toast"></div>
+  <div id="dialog"></div>
 
   <div id="joyzone" hidden><div id="joybase"><div id="joyknob"></div></div></div>
   <div id="touch" hidden>
-    <button id="btnB" aria-label="Courir">B</button>
+    <button id="btnCL" aria-label="Caméra gauche">⟲</button>
+    <button id="btnCR" aria-label="Caméra droite">⟳</button>
+    <button id="btnB" aria-label="Courir / Charge">B</button>
     <button id="btnA" aria-label="Sauter">A</button>
   </div>
 
   <div id="ovTitle" class="overlay">
     <h1>NOVA SUNSHINE</h1>
-    <h2>La Baie des Baballes — ère GameCube</h2>
-    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · Q/E caméra · MAJ marcher</p>
-    <p id="ctrlsTouch" hidden>Joystick à gauche · B courir · A sauter</p>
-    <p>Nage dans la baie, cours sur le ponton, ramasse les baballes,</p>
-    <p>trouve la SUPER BABALLE et plante le drapeau au sommet !</p>
+    <h2>La Baie des Baballes</h2>
+    <p id="ctrlsDesk">ZQSD / flèches bouger · ESPACE sauter (triple saut !) · MAJ en l'air : CHARGE AU SOL<br>
+      Q/E tourner la caméra · C recentrer · MAJ au sol marcher · P pause</p>
+    <p id="ctrlsTouch" hidden>Joystick à gauche · A sauter · B courir (en l'air : charge au sol) · ⟲⟳ caméra</p>
+    <p>Va voir le <b style="color:#ffe34a">Capitaine Médor</b> : il a 5 missions pour toi.</p>
     <p class="go">— Clique ou touche pour jouer —</p>
+    <p id="bestLine" style="color:#9ec8dd"></p>
     <p><a href="../64/" style="color:#9ec8dd">← NOVA 64</a> · <a href="../" style="color:#9ec8dd">NOVA 2D</a></p>
   </div>
 
+  <div id="ovPause" class="overlay" hidden>
+    <h1 style="font-size:min(10vw,52px)">PAUSE</h1>
+    <p class="big">P pour reprendre · R pour recommencer</p>
+  </div>
+
   <div id="ovWin" class="overlay" hidden>
-    <h1 style="font-size:min(10vw,54px)">SOMMET ATTEINT !</h1>
+    <h1 style="font-size:min(9vw,48px)">SOMMET ATTEINT !</h1>
+    <div class="rank" id="winRank">A</div>
     <p class="big" id="winStats"></p>
+    <p id="winQuests"></p>
     <p class="go">— Clique pour rejouer —</p>
   </div>
 
